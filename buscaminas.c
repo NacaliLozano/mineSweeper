@@ -195,14 +195,107 @@ int getDim2(Matrix_t *self, unsigned int *dim2) {
 	}
 }
 
+int pushCell(Matrix_t *self, unsigned int i, unsigned int j) {
+	int value;
+
+	if (!getMat(self, i, j, &value)) {
+		if (!value) {
+			pushCell(self, i - 1, j);
+			pushCell(self, i + 1, j);
+			pushCell(self, i, j - 1);
+			pushCell(self, i, j + 1);
+			return value;
+		}
+		else {
+			return value;
+		}
+	}
+	else {
+		return -1;
+	}
+
+}
+
+int countSurroundingMines(Matrix_t *self, unsigned int i, unsigned int j) {
+	int count = 0, value;
+
+	if (!errorsInMatrix(self)) {
+		if (!getMat(self, i - 1, j - 1, &value)) {
+			if (value == 10) {
+				count++;
+			}
+		}
+		if (!getMat(self, i - 1, j, &value)) {
+			if (value == 10) {
+				count++;
+			}
+		}
+		if (!getMat(self, i - 1, j + 1, &value)) {
+			if (value == 10) {
+				count++;
+			}
+		}
+		if (!getMat(self, i, j - 1, &value)) {
+			if (value == 10) {
+				count++;
+			}
+		}
+		if (!getMat(self, i, j + 1, &value)) {
+			if (value == 10) {
+				count++;
+			}
+		}
+		if (!getMat(self, i + 1, j - 1, &value)) {
+			if (value == 10) {
+				count++;
+			}
+		}
+		if (!getMat(self, i + 1, j, &value)) {
+			if (value == 10) {
+				count++;
+			}
+		}
+		if (!getMat(self, i + 1, j + 1, &value)) {
+			if (value == 10) {
+				count++;
+			}
+		}
+		return count;
+	}
+	else {
+		return -1;
+	}
+}
+
+int setInternalMatrix(Matrix_t *self) {
+	unsigned int i, j;
+	int value;
+
+	if (!errorsInMatrix(self)) {
+		for (i = 0; i < self->dim1; i++) {
+			for (j = 0; j < self->dim2; j++) {
+				if (!getMat(self, i, j, &value)) {
+					if (value == 0) {
+						self->mat[i][j] = countSurroundingMines(self, i, j);
+					}
+				}
+			}
+		}
+	return 0;
+	}
+	else {
+		return -1;
+	}
+}
+
 int main () {
 	Matrix_t *self;
 	unsigned int dimension1 = 10, dimension2 = 10;
 
-	printf("Dame el número de columnas:\n");
+	printf("Number of rows:");
 	fflush(0);
 	scanf("%d", &dimension1);
-	printf("Dame el número de filas:\n");
+	printf("Number of columns:");
 	fflush(0);
 	scanf("%d", &dimension2);
 
