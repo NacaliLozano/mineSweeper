@@ -43,7 +43,7 @@ Board_t* Board_c1(unsigned int dim1, unsigned int dim2, unsigned int mines, int 
 	//Creates a board, sets its values to zero, then randomly sets the mines and returns a pointer to the board.
 
 	Board_t *self;
-	unsigned int i, j;
+	unsigned int i, j, k, l;
 
 	self = (Board_t*)malloc(sizeof(Board_t));
 	if (self == NULL) {
@@ -52,6 +52,7 @@ Board_t* Board_c1(unsigned int dim1, unsigned int dim2, unsigned int mines, int 
 
 	self->dim1 = dim1;
 	self->dim2 = dim2;
+	self->mines = mines;
 	self->mat = malloc(dim1 * sizeof(Cell_t*));
 	if (self->mat == NULL) {
 		return NULL;
@@ -71,11 +72,16 @@ Board_t* Board_c1(unsigned int dim1, unsigned int dim2, unsigned int mines, int 
 		}
 	}
 
-	for (i = 0; i < mines; i++) {
-		srand(i + seed);
-		self->mat[rand() % self->dim1][rand() % self->dim2].value = '9';
+	for (i = 0; i < self->mines; i++) {
+		srand(i * seed);
+		k = rand() % self->dim1;
+		l = rand() % self->dim2;;
+		while (self->mat[k][l].value == '9') {
+			k = rand() % self->dim1;;
+			l = rand() % self->dim2;;
+		}
+		self->mat[k][l].value = '9';
 	}
-	//TODO implement the option where there is already a mine on the spot where it decides to plant one.
 
 	return self;
 
@@ -98,6 +104,9 @@ void Board_d1(Board_t *self){
 }
 
 int errorsInBoard(Board_t *self) {
+
+	//Checks if there are NULL pointers in Board.
+
 	unsigned int i;
 
 	if (self == NULL) {
@@ -118,16 +127,21 @@ int errorsInBoard(Board_t *self) {
 	}
 }
 
-int checkMine(unsigned int i, unsigned int j, Board_t *self) {
+int checkMine(Board_t *self, unsigned int i, unsigned int j) {
 
 	//Check if there is a mine in the selected cell. Return 0 if not, 1 if yes and a negative value if there are any errors.
 
 	if (!errorsInBoard(self)) {
-		if (self->mat[i][j].value == '9') {
-			return 1;
+		if (i < self->dim1 && j < self->dim2){
+			if (self->mat[i][j].value == '9') {
+				return 1;
+			}
+			else {
+				return 0;
+			}
 		}
 		else {
-			return 0;
+			return -2;
 		}
 	}
 	else {
@@ -195,21 +209,131 @@ void setBoard(Board_t *self) {
 		for (i = 0; i < self->dim1; i++) {
 			for (j = 0; j < self->dim2; j++) {
 				if (self->mat[i][j].value == '9') {
-					//todo setCell(self, i - 1, j - 1, (char)((self->mat[i - 1][j - 1])
+					if (i - 1 < self->dim1 && j - 1 < self->dim2 && !checkMine(self, i - 1, j - 1)) {
+						setCell(self, i - 1, j - 1, (char)((int)(self->mat[i - 1][j - 1].value) + 1), '0');
+					}
+					if (i - 1 < self->dim1 && !checkMine(self, i - 1, j)) {
+						setCell(self, i - 1, j, (char)((int)(self->mat[i - 1][j].value) + 1), '0');
+					}
+					if (i - 1 < self->dim1 && j + 1 < self->dim2 && !checkMine(self, i - 1, j + 1)) {
+						setCell(self, i - 1, j + 1, (char)((int)(self->mat[i - 1][j + 1].value) + 1), '0');
+					}
+					if (j - 1 < self->dim2 && !checkMine(self, i, j - 1)) {
+						setCell(self, i, j - 1, (char)((int)(self->mat[i][j - 1].value) + 1), '0');
+					}
+					if (j + 1 < self->dim2 && !checkMine(self, i, j + 1)) {
+						setCell(self, i, j + 1, (char)((int)(self->mat[i][j + 1].value) + 1), '0');
+					}
+					if (i + 1 < self->dim1 && j - 1 < self->dim2 && !checkMine(self, i + 1, j - 1)) {
+						setCell(self, i + 1, j - 1, (char)((int)(self->mat[i + 1][j - 1].value) + 1), '0');
+					}
+					if (i + 1 < self->dim1 && !checkMine(self, i + 1, j)) {
+						setCell(self, i + 1, j, (char)((int)(self->mat[i + 1][j].value) + 1), '0');
+					}
+					if (i + 1 < self->dim1 && j + 1 < self->dim2 && !checkMine(self, i + 1, j + 1)) {
+						setCell(self, i + 1, j + 1, (char)((int)(self->mat[i + 1][j + 1].value) + 1), '0');
+					}
 				}
+			}
+		}
+	}
+}
 
+void discoverSurroundingCells(Board_t *self, unsigned int i, unsigned int j) {
+
+	//Discover a cell and its surrounding cells until it hits a cell whose value is not 0.
+
+	if (!errorsInBoard(self)) {
+		if (i < self->dim1 && j < self->dim2) {
+			if (self->mat[i][j].visible == '0') {
+				self->mat[i][j].visible = '1';
+				if (self->mat[i][j].value == '0') {
+					discoverSurroundingCells(self, i - 1, j - 1);
+					discoverSurroundingCells(self, i - 1, j);
+					discoverSurroundingCells(self, i - 1, j + 1);
+					discoverSurroundingCells(self, i, j - 1);
+					discoverSurroundingCells(self, i, j + 1);
+					discoverSurroundingCells(self, i + 1, j - 1);
+					discoverSurroundingCells(self, i + 1, j);
+					discoverSurroundingCells(self, i + 1, j + 1);
+				}
+			}
+		}
+	}
+}
+
+void printBoardVisible(Board_t *self) {
+
+	//Prints a board.
+
+	unsigned int i, j;
+
+	if (!errorsInBoard(self)) {
+		printf("  ");
+		for (i = 0; i < self->dim1; i++) {
+			printf("%d ", i);
+		}
+		printf("\n");
+		for (i = 0; i < self->dim1; i++) {
+			printf("%d ", i);
+			for (j = 0; j < self->dim2; j++) {
+				if (self->mat[i][j].visible == '1') {
+					printf("%c ", self->mat[i][j].value);
+				}
+				else {
+					printf("  ");
+				}
 			}
 			printf("\n");
 		}
 	}
+}
 
+int youWon(Board_t *self) {
+
+	//Returns 1 if all cells that are not visible are mines and 0 otherwise.
+
+	unsigned int i, j;
+
+	if (!errorsInBoard(self)) {
+		for (i = 0; i < self->dim1; i++) {
+			for (j = 0; j < self->dim2; j++) {
+				if (self->mat[i][j].visible == '0' && self->mat[i][j].value != '9') {
+					return 0;
+				}
+			}
+		}
+		return 1;
+	}
+	else {
+		return -1;
+	}
 }
 
 int main() {
 
 	Board_t *self;
+	unsigned int i, j;
 
-	self = Board_c1(10, 10, 15, -5000);
+	self = Board_c1(10, 10, 1, 2000);
+	setBoard(self);
+	do {
+		printBoardVisible(self);
+		printf("Select a cell [row].[column]: ");
+		fflush(0);
+		scanf("%d.%d", &i, &j);
+		if (checkMine(self, i, j)) {
+			printf("********GAME OVER********\n");
+			break;
+		}
+
+		discoverSurroundingCells(self, i, j);
+	}
+	while (!youWon(self));
+	if (youWon(self)) {
+		printf("********YOU WON********\n");
+	}
+
 	printBoard(self);
 	Board_d1(self);
 
